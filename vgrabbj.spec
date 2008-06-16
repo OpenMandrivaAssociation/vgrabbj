@@ -1,6 +1,6 @@
 %define name vgrabbj
 %define version 0.9.6
-%define release %mkrel 2
+%define release %mkrel 3
 
 Name: %{name}
 Summary: A command-line v4l grabber
