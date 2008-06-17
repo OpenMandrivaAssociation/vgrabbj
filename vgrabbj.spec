@@ -13,10 +13,10 @@ URL: http://vgrabbj.gecius.de/
 License: GPL
 Group: Video
 BuildRoot: %{_tmppath}/%{name}-buildroot
-BuildRequires: devel(libjpeg)
-BuildRequires: devel(libz)
-BuildRequires: devel(libttf)
-BuildRequires: devel(libfreetype)
+BuildRequires: jpeg-devel
+BuildRequires: zlib-devel
+BuildRequires: tiff-devel
+BuildRequires: freetype-devel
 BuildRequires: png-devel
 
 %description
