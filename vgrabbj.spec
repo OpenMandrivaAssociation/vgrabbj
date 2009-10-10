@@ -7,8 +7,9 @@ Summary: A command-line v4l grabber
 Version: %{version}
 Release: %{release}
 
-Source: %{name}-%{version}.tar.bz2
-Patch: %{name}-%{version}-gcc4.patch
+Source: http://vgrabbj.gecius.de/vgrabbj/%{name}-%{version}.tar.bz2
+Patch0: %{name}-%{version}-gcc4.patch
+Patch1: vgrabbj-0.9.6-fix-str-fmt.patch
 URL: http://vgrabbj.gecius.de/
 License: GPL
 Group: Video
@@ -27,15 +28,16 @@ It can also be used in stopmotion program to acquire images.
 
 %prep
 %setup -q
-%patch -p1
+%patch0 -p1
+%patch1 -p0
 
 %build
-%configure
+%configure2_5x
 %make
 										
 %install
 rm -rf $RPM_BUILD_ROOT
-%makeinstall
+%makeinstall_std
 
 %clean
 rm -rf $RPM_BUILD_ROOT
