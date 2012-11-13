@@ -1,0 +1,17 @@
+--- vgrabbj.c.str	2009-10-10 03:36:09.000000000 +0200
++++ vgrabbj.c	2009-10-10 03:36:30.000000000 +0200
+@@ -101,12 +101,12 @@
+     strcat(buf, "\n");
+     va_end(arg_ptr);
+     if (vconf->loop && vconf->init_done) {
+-      syslog(msg, buf);
++      syslog(msg, "%s", buf);
+       if (msg == 3) {
+ 	sleep(1);
+       }
+     } else {
+-      fprintf(stderr, buf);
++      fprintf(stderr, "%s", buf);
+       fflush(stderr);
+     }
+     
