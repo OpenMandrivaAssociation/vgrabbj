@@ -1,0 +1,260 @@
+--- vgrabbj-0.9.6.orig/vgrabbj.h
++++ vgrabbj-0.9.6/vgrabbj.h
+@@ -42,7 +42,6 @@
+ #include <time.h>
+ #include <pwd.h>
+ #include <linux/types.h>
+-#include <linux/videodev.h>
+ #include <jpeglib.h>
+ #include <png.h>
+ #include <ccvt.h>
+@@ -50,6 +49,8 @@
+ #include <mcheck.h>
+ #include <sys/mman.h>
+ 
++#include <libv4l1.h>
++
+ #if defined(HAVE_LIBTTF)
+ #if defined(HAVE_FREETYPE_FREETYPE_H)
+ #define LIBTTF 1
+--- vgrabbj-0.9.6.orig/configure.in
++++ vgrabbj-0.9.6/configure.in
+@@ -99,6 +99,8 @@
+ AC_PROG_GCC_TRADITIONAL
+ AC_FUNC_STRFTIME
+ 
++PKG_CHECK_MODULES([LIBV4L1], [libv4l1])
++
+ if test \"x${prefix}\" = \"xNONE\"; then
+   AC_DEFINE_UNQUOTED(SYSCONF_DIR,"${ac_default_prefix}/etc/vgrabbj.conf")
+ else
+--- vgrabbj-0.9.6.orig/v_config.c
++++ vgrabbj-0.9.6/v_config.c
+@@ -276,10 +276,10 @@
+  */
+   int dev;
+   FILE *x;
+-  if ( (dev=open(vconf->in, O_RDONLY)) < 0) {
++  if ( (dev=v4l1_open(vconf->in, O_RDONLY)) < 0) {
+     v_error(vconf, LOG_CRIT, "Can't open \"%s\" as VideoDevice!", vconf->in);
+   } else {
+-    close(dev);
++    v4l1_close(dev);
+   }
+   
+   if ( !(x=fopen(vconf->out, "w+"))) {
+@@ -341,11 +341,11 @@
+   v_error(vconf, LOG_INFO, "Trying palette %s", plist[palette].name);
+   vconf->vpic.palette=palette;
+ 
+-  if (ioctl(dev, VIDIOCSPICT, &vconf->vpic) < 0) {
++  if (v4l1_ioctl(dev, VIDIOCSPICT, &vconf->vpic) < 0) {
+     v_error(vconf, LOG_WARNING, "Unable to set palette");
+     return 0;
+   }
+-  if (ioctl(dev, VIDIOCGPICT, &vconf->vpic) < 0) {
++  if (v4l1_ioctl(dev, VIDIOCGPICT, &vconf->vpic) < 0) {
+     v_error(vconf, LOG_WARNING, "Unable to get palette info");
+     return 0;
+   }
+@@ -364,25 +364,25 @@
+ 
+   v_error(vconf, LOG_INFO, "Checking settings of device %s", vconf->in);
+   
+-  while (ioctl(vconf->dev, VIDIOCGCAP, &vconf->vcap) < 0)
++  while (v4l1_ioctl(vconf->dev, VIDIOCGCAP, &vconf->vcap) < 0)
+     v_error(vconf, LOG_ERR, "Problem getting video capabilities");
+   if ( (vconf->vcap.maxwidth < vconf->win.width) ||
+        (vconf->vcap.minwidth > vconf->win.width) ||
+        (vconf->vcap.maxheight < vconf->win.height) ||
+        (vconf->vcap.minheight > vconf->win.height) )
+     v_error(vconf, LOG_CRIT, "Device doesn't support width/height");
+-  while (ioctl(vconf->dev, VIDIOCGWIN, &twin))
++  while (v4l1_ioctl(vconf->dev, VIDIOCGWIN, &twin))
+     v_error(vconf, LOG_ERR, "Problem getting window information");
+   vconf->win.flags=twin.flags;
+   vconf->win.x=twin.x;
+   vconf->win.y=twin.y;
+   vconf->win.chromakey=twin.chromakey;
+   if (vconf->windowsize)
+-    while (ioctl(vconf->dev, VIDIOCSWIN, &vconf->win) )
++    while (v4l1_ioctl(vconf->dev, VIDIOCSWIN, &vconf->win) )
+       v_error(vconf, LOG_ERR, "Problem setting window size");
+-  while (ioctl(vconf->dev, VIDIOCGWIN, &vconf->win) <0)
++  while (v4l1_ioctl(vconf->dev, VIDIOCGWIN, &vconf->win) <0)
+     v_error(vconf, LOG_ERR, "Problem getting window size");
+-  while (ioctl(vconf->dev, VIDIOCGPICT, &vconf->vpic) < 0)
++  while (v4l1_ioctl(vconf->dev, VIDIOCGPICT, &vconf->vpic) < 0)
+     v_error(vconf, LOG_ERR, "Problem getting picture properties");
+ 
+   /* HERE we actually TRY to get a palette the device delivers.
+@@ -422,7 +422,7 @@
+     
+   v_error(vconf, LOG_DEBUG, "Set palette successfully to %s", plist[vconf->vpic.palette].name);
+ 
+-  if ( (ioctl(vconf->dev, VIDIOCGMBUF, &vconf->vbuf) < 0) || 
++  if ( (v4l1_ioctl(vconf->dev, VIDIOCGMBUF, &vconf->vbuf) < 0) || 
+        ((vconf->autobrightness) && 
+ 	(vconf->vpic.palette==VIDEO_PALETTE_RGB24)) ||
+        (vconf->nousemmap) )
+--- vgrabbj-0.9.6.orig/vgrabbj.c
++++ vgrabbj-0.9.6/vgrabbj.c
+@@ -135,19 +135,19 @@
+   struct video_picture pic;
+   int dev;
+ 
+-  if ( (dev = open(in, O_RDONLY)) < 0 ) {
++  if ( (dev = v4l1_open(in, O_RDONLY)) < 0 ) {
+     fprintf(stderr, "Can't open device %s\n", in);
+     exit(1);
+   }
+-  if (ioctl(dev, VIDIOCGCAP, &cap) < 0) {
++  if (v4l1_ioctl(dev, VIDIOCGCAP, &cap) < 0) {
+     fprintf(stderr, "Can't get capabilities of device %s\n", in);
+     exit(1);
+   }
+-  if (ioctl(dev, VIDIOCGPICT, &pic) < 0) {
++  if (v4l1_ioctl(dev, VIDIOCGPICT, &pic) < 0) {
+     fprintf(stderr, "Can't get picture properties of device %s\n", in);
+     exit(1);
+   }
+-  if (ioctl(dev, VIDIOCGWIN, &win) < 0) {
++  if (v4l1_ioctl(dev, VIDIOCGWIN, &win) < 0) {
+     fprintf(stderr, "Can't get overlay values of device %s\n", in);
+     exit(1);
+   }
+@@ -178,7 +178,7 @@
+ 	  pic.brightness, pic.hue, pic.colour, pic.contrast,
+ 	  pic.whiteness, pic.depth, plist[pic.palette].name, pic.palette,
+ 	  win.width, win.height, win.chromakey);
+-  dev=close(dev);
++  dev=v4l1_close(dev);
+   if (dev)
+     fprintf(stderr, "Error occured while closing %s\n", in);
+   exit(0);
+@@ -201,11 +201,11 @@
+ 
+     /* and Re-initialize the palette, in case someone changed it meanwhile */
+ 
+-    while (ioctl(vconf->dev, VIDIOCSPICT, &vconf->vpic) < 0 )
++    while (v4l1_ioctl(vconf->dev, VIDIOCSPICT, &vconf->vpic) < 0 )
+       v_error(vconf, LOG_ERR, "Device %s couldn't be reset to known palette %s",
+ 	      vconf->in, vconf->vpic.palette);
+     if (vconf->windowsize)
+-      while (ioctl(vconf->dev, VIDIOCSWIN, &vconf->win) )
++      while (v4l1_ioctl(vconf->dev, VIDIOCSWIN, &vconf->win) )
+ 	v_error(vconf, LOG_ERR, "Problem setting window size"); // exit
+ 
+     set_picture_parms(vconf);
+@@ -224,12 +224,12 @@
+       if (vconf->autobrightness && vconf->vpic.palette==VIDEO_PALETTE_RGB24) {
+ 	v_error(vconf, LOG_INFO, "Doing brightness adjustment");
+ 	do {
+-	  while (read(vconf->dev, vconf->buffer, size) < size)
++	  while (v4l1_read(vconf->dev, vconf->buffer, size) < size)
+ 	    v_error(vconf, LOG_ERR, "Error reading from %s", vconf->in);
+ 	  f = brightness_adj(vconf, &newbright);
+ 	  if (f) {
+ 	    vconf->vpic.brightness += (newbright << 8);
+-	    if (ioctl(vconf->dev, VIDIOCSPICT, &vconf->vpic)==-1) 
++	    if (v4l1_ioctl(vconf->dev, VIDIOCSPICT, &vconf->vpic)==-1) 
+ 	      v_error(vconf, LOG_WARNING, "Problem setting brightness");
+ 	    err_count++;
+ 	  
+@@ -242,7 +242,7 @@
+ 	v_error(vconf, LOG_INFO, "Brightness adjusted");
+       } else {
+ 	v_error(vconf, LOG_DEBUG, "Using normal read for image grabbing");
+-	read(vconf->dev, vconf->buffer, size);
++	v4l1_read(vconf->dev, vconf->buffer, size);
+       }
+     } while (discard--);
+ 
+@@ -259,7 +259,7 @@
+ 	  v_error(vconf, LOG_ERR, "Could not grab frame (100 tries)");
+ 	  break;
+ 	}
+-      } while (ioctl(vconf->dev, VIDIOCMCAPTURE, &vconf->vmap) < 0);
++      } while (v4l1_ioctl(vconf->dev, VIDIOCMCAPTURE, &vconf->vmap) < 0);
+ 
+       err_count=0;
+       do {
+@@ -267,7 +267,7 @@
+ 	  v_error(vconf, LOG_ERR, "Could not sync with frame (100 tries)");
+ 	  break;
+ 	}
+-      } while (ioctl(vconf->dev, VIDIOCSYNC, &vconf->vmap.frame) < 0);
++      } while (v4l1_ioctl(vconf->dev, VIDIOCSYNC, &vconf->vmap.frame) < 0);
+ 
+       vconf->buffer=memcpy(vconf->buffer, vconf->map+vconf->vbuf.offsets[vconf->vmap.frame], size);
+ 
+--- vgrabbj-0.9.6.orig/Makefile.am
++++ vgrabbj-0.9.6/Makefile.am
+@@ -19,6 +19,8 @@
+ 
+ bin_PROGRAMS = vgrabbj
+ vgrabbj_SOURCES = vgrabbj.c vgrabbj.h v_config.c v_config.h font.c ccvt_c.c ccvt.h v_ftp.c v_ftp.h v_writer.c v_writer.h v_utils.c v_utils.h v_stamp.c v_stamp.h v_plist.h v_options.h
++vgrabbj_CFLAGS = @LIBV4L1_CFLAGS@
++vgrabbj_LDADD = @LIBV4L1_LIBS@
+ 
+ #sysconf_DATA = vgrabbj.conf.default
+ EXTRA_DIST = vgrabbj.conf.default $(man_MANS)
+--- vgrabbj-0.9.6.orig/v_utils.c
++++ vgrabbj-0.9.6/v_utils.c
+@@ -27,9 +27,9 @@
+ 
+ void init_mmap(struct vconfig *vconf) {
+   if (vconf->usemmap) {
+-    if ( (vconf->map = mmap(0, vconf->vbuf.size, PROT_READ, MAP_SHARED, vconf->dev, 0)) < 0 )
++    if ( (vconf->map = v4l1_mmap(0, vconf->vbuf.size, PROT_READ, MAP_SHARED, vconf->dev, 0)) < 0 )
+       v_error(vconf, LOG_CRIT, "Could not get mmap-area of size %d", vconf->vbuf.size);
+-    if ( ioctl(vconf->dev, VIDIOCGMBUF, &vconf->vbuf) < 0 )
++    if ( v4l1_ioctl(vconf->dev, VIDIOCGMBUF, &vconf->vbuf) < 0 )
+       v_error(vconf, LOG_CRIT, "Could not initialize mmap-vars");
+     
+     v_error(vconf, LOG_DEBUG, "Size allocated for framebuffer: %d", vconf->vbuf.size);
+@@ -44,7 +44,7 @@
+ 
+ void free_mmap(struct vconfig *vconf) {
+   if (vconf->map) {
+-    if (!munmap(vconf->map, vconf->vbuf.size)) {
++    if (!v4l1_munmap(vconf->map, vconf->vbuf.size)) {
+       v_error(vconf, LOG_DEBUG, "mmap'ed area 'freed'");
+       vconf->map=NULL;
+     }
+@@ -60,7 +60,7 @@
+ 
+ void open_device(struct vconfig *vconf) {
+   int err_count=0;
+-  while ( ((vconf->dev=open(vconf->in, O_RDONLY)) < 0) && (!(err_count++>200)) )
++  while ( ((vconf->dev=v4l1_open(vconf->in, O_RDONLY)) < 0) && (!(err_count++>200)) )
+     usleep(25000);
+   if (err_count>200)
+     v_error(vconf, LOG_ERR, "Problem opening input-device %s", vconf->in);
+@@ -73,7 +73,7 @@
+ 
+ void close_device(struct vconfig *vconf) {
+   if(vconf->dev) {
+-    if ( (vconf->dev=close(vconf->dev)) )
++    if ( (vconf->dev=v4l1_close(vconf->dev)) )
+       v_error(vconf, LOG_ERR, "Error while closing %s", vconf->in);
+     else
+       v_error(vconf, LOG_DEBUG, "Device %s closed", vconf->in);
+@@ -95,7 +95,7 @@
+ 	  vconf->hue, vconf->brightness, vconf->colour,
+ 	  vconf->contrast, vconf->whiteness);
+   
+-  if (ioctl(vconf->dev, VIDIOCGPICT, &(vconf->vpic)) == -1) {
++  if (v4l1_ioctl(vconf->dev, VIDIOCGPICT, &(vconf->vpic)) == -1) {
+     perror ("PICTURE");
+     return (-1);
+   }
+@@ -111,7 +111,7 @@
+   if (vconf->whiteness > -1) 
+     vconf->vpic.whiteness = vconf->whiteness;
+   
+-  if (ioctl(vconf->dev, VIDIOCSPICT, &(vconf->vpic)) == -1) {
++  if (v4l1_ioctl(vconf->dev, VIDIOCSPICT, &(vconf->vpic)) == -1) {
+     perror ("PICTURE");
+     return (-1);
+   }

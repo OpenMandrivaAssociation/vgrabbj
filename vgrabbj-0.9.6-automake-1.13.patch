@@ -1,0 +1,12 @@
+diff -up vgrabbj-0.9.6/configure.in.automake-1_13 vgrabbj-0.9.6/configure.in
+--- vgrabbj-0.9.6/configure.in.automake-1_13	2013-01-18 00:56:39.138469705 +0100
++++ vgrabbj-0.9.6/configure.in	2013-01-18 00:57:18.409035042 +0100
+@@ -22,7 +22,7 @@ dnl Process this file with autoconf to p
+ AC_INIT(vgrabbj.c)
+ 
+ # For automake
+-AM_CONFIG_HEADER(config.h)
++AC_CONFIG_HEADERS(config.h)
+ AM_INIT_AUTOMAKE(vgrabbj,0.9.6)
+ AC_ARG_PROGRAM
+ 
