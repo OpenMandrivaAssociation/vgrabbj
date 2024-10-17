@@ -4,7 +4,7 @@ Version:	0.9.6
 Release:	9
 License:	GPLv2+
 Group:		Video
-Url:		http://vgrabbj.gecius.de/
+Url:		https://vgrabbj.gecius.de/
 Source0:	http://vgrabbj.gecius.de/vgrabbj/%{name}-%{version}.tar.bz2
 Patch0:		vgrabbj-0.9.6-gcc4.patch
 Patch1:		vgrabbj-0.9.6-fix-str-fmt.patch
