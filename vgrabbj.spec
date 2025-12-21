@@ -11,6 +11,11 @@ Patch1:		vgrabbj-0.9.6-fix-str-fmt.patch
 Patch2:		vgrabbj-0.9.6-libv4l1.patch
 Patch3:		vgrabbj-0.9.6-off-by-one.patch
 Patch4:		vgrabbj-0.9.6-automake-1.13.patch
+BuildRequires:	autoconf
+BuildRequires:	automake
+BuildRequires:	libtool-base
+BuildRequires:	slibtool
+BuildRequires:	make
 BuildRequires:	jpeg-devel
 BuildRequires:	pkgconfig(freetype2)
 BuildRequires:	pkgconfig(libpng)
